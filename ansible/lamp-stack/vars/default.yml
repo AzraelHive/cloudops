@@ -1,0 +1,5 @@
+app_user: "cloudops"
+http_host: "github.com"
+http_conf: "github.com.conf"
+http_port: "80"
+disable_default: true
