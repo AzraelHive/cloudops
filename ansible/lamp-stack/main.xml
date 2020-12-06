@@ -1,0 +1,111 @@
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/default.yml
+
+  tasks:
+    - name: "[Python] Installing Package"
+      apt:
+        name:
+          - python3
+          - python3-pip
+        update_cache: yes
+        state: latest
+
+    - name: "[Python] Installing pymysql"
+      become: true
+      pip: 
+        name: pymysql
+        state: present
+
+    - name: "[Repository] Adding Apache"
+      apt_repository: repo='ppa:ondrej/apache2' state=present update_cache=yes
+
+    - name: "[Repository] Adding PHP"
+      apt_repository: repo='ppa:ondrej/php' state=present update_cache=yes
+
+    - name: Installing Presiquisites
+      apt:
+        name:
+          - aptitude
+          - unzip
+          - git
+          - curl
+          - build-essential
+          - libapr1-dev
+          - libaprutil1-dev
+          - libpcre3-dev
+        update_cache: yes
+        state: latest
+
+    - name: "[Apache] Installing Package"
+      apt:
+        name: apache2
+        update_cache: yes
+        state: latest
+
+    - name: "[Apache] Setting up virtual host"
+      template: 
+        src: "files/apache.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+
+    - name: "[MySQL] Installing Package"
+      apt:
+        name:
+          - mysql-server
+          - mysql-client
+     
+    - name: "[MySQL] Changing root Password"
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: "[MySQL] Removing all anonymous user accounts"
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: "[MySQL] Removing test database"
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: "[PHP] Installing Package"
+      apt:
+        name: 
+          - php7.2
+          - php7.2-bcmath
+          - php7.2-curl
+          - php7.2-dev
+          - php7.2-gd
+          - php7.2-intl
+          - php7.2-mbstring
+          - php7.2-xml
+          - php7.2-zip
+          - php7.2-mysql
+          - php7.2-cli
+          - php7.2-dev
+          - libapache2-mod-php
+
+    - name: "[PHP] Creating package information file in /var/www/html"
+      copy:
+        src: "files/info.php"
+        dest: /var/www/html 
+
+  handlers:
+    - name: "[Service] Reloading Apache"
+      service:
+        name: apache2
+        state: reloaded
+
+    - name: "[Service] Restarting Apache"
+      service:
+        name: apache2
+        state: restarted
